@@ -3,6 +3,7 @@ components/
 managed_components/
 build/
 .vscode/
+.cursor/
 .devcontainer/
 sdkconfig.old
 sdkconfig
@@ -12,3 +13,4 @@ releases/
 main/assets/lang_config.h
 .DS_Store
 .cache
+xiaozhi-esp32.code-workspace
