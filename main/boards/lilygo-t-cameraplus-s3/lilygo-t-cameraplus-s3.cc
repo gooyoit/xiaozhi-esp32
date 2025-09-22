@@ -6,7 +6,6 @@
 #include "config.h"
 #include "power_save_timer.h"
 #include "i2c_device.h"
-#include "iot/thing_manager.h"
 #include "sy6970.h"
 #include "pin_config.h"
 #include "esp32_camera.h"
@@ -18,9 +17,6 @@
 #include <wifi_station.h>
 
 #define TAG "LilygoTCameraPlusS3Board"
-
-LV_FONT_DECLARE(font_puhui_16_4);
-LV_FONT_DECLARE(font_awesome_16_4);
 
 class Cst816x : public I2cDevice {
 public:
@@ -83,16 +79,11 @@ private:
     void InitializePowerSaveTimer() {
         power_save_timer_ = new PowerSaveTimer(-1, 60, -1);
         power_save_timer_->OnEnterSleepMode([this]() {
-            ESP_LOGI(TAG, "Enabling sleep mode");
-            auto display = GetDisplay();
-            display->SetChatMessage("system", "");
-            display->SetEmotion("sleepy");
+            GetDisplay()->SetPowerSaveMode(true);
             GetBacklight()->SetBrightness(10);
         });
         power_save_timer_->OnExitSleepMode([this]() {
-            auto display = GetDisplay();
-            display->SetChatMessage("system", "");
-            display->SetEmotion("neutral");
+            GetDisplay()->SetPowerSaveMode(false);
             GetBacklight()->RestoreBrightness();
         });
         power_save_timer_->OnShutdownRequest([this]() {
@@ -139,7 +130,7 @@ private:
         }
     }
 
-    static void touchpad_daemon(void *param) {
+    static void TouchpadDaemon(void *param) {
         vTaskDelay(pdMS_TO_TICKS(2000));
         auto &board = (LilygoTCameraPlusS3Board&)Board::GetInstance();
         auto touchpad = board.GetTouchpad();
@@ -165,7 +156,7 @@ private:
     void InitCst816d() {
         ESP_LOGI(TAG, "Init CST816x");
         cst816d_ = new Cst816x(i2c_bus_, CST816_ADDRESS);
-        xTaskCreate(touchpad_daemon, "tp", 2048, NULL, 5, NULL);
+        xTaskCreate(TouchpadDaemon, "tp", 2048, NULL, 5, NULL);
     }
 
     void InitSpi() {
@@ -213,12 +204,7 @@ private:
         ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel, true));
 
         display_ = new SpiLcdDisplay(panel_io, panel,
-                                     DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
-                                     {
-                                         .text_font = &font_puhui_16_4,
-                                         .icon_font = &font_awesome_16_4,
-                                         .emoji_font = font_emoji_32_init(),
-                                     });
+                                     DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
     }
 
     void InitializeButtons() {
@@ -277,6 +263,10 @@ private:
         camera_->SetHMirror(1);
     }
 
+    void InitializeTools() {
+        static IrFilterController irFilter(AP1511B_GPIO);
+    }
+
 public:
     LilygoTCameraPlusS3Board() : boot_button_(BOOT_BUTTON_GPIO), key1_button_(KEY1_BUTTON_GPIO) {
         InitializePowerSaveTimer();
@@ -288,14 +278,7 @@ public:
         InitializeSt7789Display();
         InitializeButtons();
         InitializeCamera();
-#if CONFIG_IOT_PROTOCOL_XIAOZHI
-        auto &thing_manager = iot::ThingManager::GetInstance();
-        thing_manager.AddThing(iot::CreateThing("Speaker"));
-        thing_manager.AddThing(iot::CreateThing("Screen"));
-        thing_manager.AddThing(iot::CreateThing("Battery"));
-#elif CONFIG_IOT_PROTOCOL_MCP
-        static IrFilterController irFilter(AP1511B_GPIO);
-#endif
+        InitializeTools();
         GetBacklight()->RestoreBrightness();
     }
 
