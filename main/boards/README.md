@@ -98,7 +98,7 @@ mkdir main/boards/my-custom-board
             "sdkconfig_append": [
                 // 额外需要的编译配置
                 "CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y",
-                "CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=\"partitions/v1/8m.csv\""
+                "CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=\"partitions/v2/8m.csv\""
             ]
         }
     ]
@@ -118,22 +118,18 @@ mkdir main/boards/my-custom-board
 
 ```cpp
 #include "wifi_board.h"
-#include "audio_codecs/es8311_audio_codec.h"
+#include "codecs/es8311_audio_codec.h"
 #include "display/lcd_display.h"
 #include "application.h"
 #include "button.h"
 #include "config.h"
-#include "iot/thing_manager.h"
+#include "mcp_server.h"
 
 #include <esp_log.h>
 #include <driver/i2c_master.h>
 #include <driver/spi_common.h>
 
 #define TAG "MyCustomBoard"
-
-// 声明字体
-LV_FONT_DECLARE(font_puhui_16_4);
-LV_FONT_DECLARE(font_awesome_16_4);
 
 class MyCustomBoard : public WifiBoard {
 private:
@@ -212,20 +208,12 @@ private:
         display_ = new SpiLcdDisplay(panel_io, panel,
                                     DISPLAY_WIDTH, DISPLAY_HEIGHT, 
                                     DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, 
-                                    DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
-                                    {
-                                        .text_font = &font_puhui_16_4,
-                                        .icon_font = &font_awesome_16_4,
-                                        .emoji_font = font_emoji_32_init(),
-                                    });
+                                    DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
     }
 
-    // IoT设备初始化
-    void InitializeIot() {
-        auto& thing_manager = iot::ThingManager::GetInstance();
-        thing_manager.AddThing(iot::CreateThing("Speaker"));
-        thing_manager.AddThing(iot::CreateThing("Screen"));
-        // 可以添加更多IoT设备
+    // MCP Tools 初始化
+    void InitializeTools() {
+        // 参考 MCP 文档
     }
 
 public:
@@ -235,7 +223,7 @@ public:
         InitializeSpi();
         InitializeDisplay();
         InitializeButtons();
-        InitializeIot();
+        InitializeTools();
         GetBacklight()->SetBrightness(100);
     }
 

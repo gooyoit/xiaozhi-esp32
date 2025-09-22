@@ -14,7 +14,13 @@ main/assets/lang_config.h
 main/mmap_generate_emoji.h
 .DS_Store
 .cache
+<<<<<<< HEAD
 xiaozhi-esp32.code-workspace
 
 main/mmap_generate_emoji.h
 
+=======
+*.pyc
+*.bin
+mmap_generate_*.h
+>>>>>>> main

@@ -1,11 +1,10 @@
 #include "wifi_board.h"
-#include "audio_codecs/es8311_audio_codec.h"
+#include "codecs/es8311_audio_codec.h"
 #include "display/lcd_display.h"
 #include "system_reset.h"
 #include "application.h"
 #include "button.h"
 #include "config.h"
-#include "iot/thing_manager.h"
 #include "led/single_led.h"
 
 #include <esp_log.h>
@@ -16,9 +15,6 @@
 
 #define TAG "kevin-sp-v4"
 
-LV_FONT_DECLARE(font_puhui_20_4);
-LV_FONT_DECLARE(font_awesome_20_4);
-
 class KEVIN_SP_V4Board : public WifiBoard {
 private:
     i2c_master_bus_handle_t display_i2c_bus_;
@@ -26,6 +22,7 @@ private:
     LcdDisplay* display_;
     i2c_master_bus_handle_t codec_i2c_bus_;
     Esp32Camera* camera_;
+
     void InitializeCodecI2c() {
         // Initialize I2C peripheral
         i2c_master_bus_config_t i2c_bus_cfg = {
@@ -98,12 +95,7 @@ private:
         ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel, true));
 
         display_ = new SpiLcdDisplay(panel_io, panel,
-                            DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
-                            {
-                                .text_font = &font_puhui_20_4,
-                                .icon_font = &font_awesome_20_4,
-                                .emoji_font = font_emoji_64_init(),
-                            });
+                            DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
     }
 
     void InitializeCamera() {
@@ -139,13 +131,6 @@ private:
 
         camera_ = new Esp32Camera(config);
     }
-    // 物联网初始化，添加对 AI 可见设备
-    void InitializeIot() {
-        auto& thing_manager = iot::ThingManager::GetInstance();
-        thing_manager.AddThing(iot::CreateThing("Speaker"));
-        thing_manager.AddThing(iot::CreateThing("Screen"));
-        thing_manager.AddThing(iot::CreateThing("Lamp"));
-    }
 
 public:
     KEVIN_SP_V4Board() :  boot_button_(BOOT_BUTTON_GPIO) {
@@ -155,10 +140,8 @@ public:
         InitializeButtons();
         InitializeSt7789Display();  
         InitializeCamera();
-        InitializeIot();
         GetBacklight()->RestoreBrightness();
     }
-    
 
     virtual Led* GetLed() override {
         static SingleLed led(BUILTIN_LED_GPIO);
